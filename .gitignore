@@ -1,0 +1,9 @@
+node_modules/
+dist/
+artifacts/
+*.log
+.legacy-electron/
+.legacy-preview/
+.venv/
+.tools/
+__pycache__/
