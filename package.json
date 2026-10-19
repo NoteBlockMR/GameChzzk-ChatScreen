@@ -1,6 +1,6 @@
 {
   "name": "chzzk-chat-lounge",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
   "description": "Windows game capture and CHZZK chat overlay",
   "scripts": {"build": "node scripts/build.cjs"},

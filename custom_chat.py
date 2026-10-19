@@ -62,6 +62,9 @@ class CustomChatPanel(QWidget):
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # Wrapped cards can change height after the first layout pass. Follow
+        # the final scroll range, not the previous frame's maximum.
+        self.scroll.verticalScrollBar().rangeChanged.connect(self._scroll_to_latest)
         self.scroll.setStyleSheet('QScrollArea,QWidget#chatFeed {background:#101321;} QScrollBar:vertical {width:4px;background:#101321;} QScrollBar::handle:vertical {background:#635c88;min-height:20px;}')
         self.feed = QWidget()
         self.feed.setObjectName('chatFeed')
@@ -136,10 +139,11 @@ class CustomChatPanel(QWidget):
                 self._render()
         self.page().runJavaScript(SNAPSHOT, 0, receive)
 
-    def _render(self):
+    def _scroll_to_latest(self, *_args):
         bar = self.scroll.verticalScrollBar()
-        follow = bar.value() >= bar.maximum() - 30
-        position = bar.value()
+        bar.setValue(bar.maximum())
+
+    def _render(self):
         while self.rows.count() > 1:
             item = self.rows.takeAt(1)
             if item.widget():
@@ -167,4 +171,4 @@ class CustomChatPanel(QWidget):
                 label.setStyleSheet(f'background:transparent;border:none;color:{ink};font-size:{size}px;')
                 box.addWidget(label)
             self.rows.addWidget(card)
-        QTimer.singleShot(0, lambda: bar.setValue(bar.maximum() if follow else position))
+        QTimer.singleShot(0, self._scroll_to_latest)

@@ -12,8 +12,8 @@ const crypto = require('node:crypto');
   const paths = await packager({
     dir: path.join(root, 'desktop'), name: 'ChzzkChatLounge',
     platform: 'win32', arch: 'x64', electronVersion: '44.9.0',
-    out: process.env.CHZZK_BUILD_OUTPUT ? path.resolve(process.env.CHZZK_BUILD_OUTPUT) : path.join(root, 'dist', '1.1.5'), overwrite: true, asar: true,
-    appVersion: '1.1.5', buildVersion: '1.1.5',
+    out: process.env.CHZZK_BUILD_OUTPUT ? path.resolve(process.env.CHZZK_BUILD_OUTPUT) : path.join(root, 'dist', '1.1.6'), overwrite: true, asar: true,
+    appVersion: '1.1.6', buildVersion: '1.1.6',
     executableName: 'ChzzkChatLounge',
     win32metadata: { ProductName: 'CHZZK Chat Lounge', FileDescription: 'CHZZK game capture and chat overlay', InternalName: 'ChzzkChatLounge' }
   });
