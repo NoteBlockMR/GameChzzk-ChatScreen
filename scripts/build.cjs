@@ -12,8 +12,8 @@ const crypto = require('node:crypto');
   const paths = await packager({
     dir: path.join(root, 'desktop'), name: 'ChzzkChatLounge',
     platform: 'win32', arch: 'x64', electronVersion: '44.9.0',
-    out: process.env.CHZZK_BUILD_OUTPUT ? path.resolve(process.env.CHZZK_BUILD_OUTPUT) : path.join(root, 'dist', '1.1.6'), overwrite: true, asar: true,
-    appVersion: '1.1.6', buildVersion: '1.1.6',
+    out: process.env.CHZZK_BUILD_OUTPUT ? path.resolve(process.env.CHZZK_BUILD_OUTPUT) : path.join(root, 'dist', '1.1.7'), overwrite: true, asar: true,
+    appVersion: '1.1.7', buildVersion: '1.1.7',
     executableName: 'ChzzkChatLounge',
     win32metadata: { ProductName: 'CHZZK Chat Lounge', FileDescription: 'CHZZK game capture and chat overlay', InternalName: 'ChzzkChatLounge' }
   });
@@ -32,6 +32,7 @@ const crypto = require('node:crypto');
   await fs.copyFile(path.join(root, 'PACKAGING.md'), path.join(output, 'PACKAGING.md'));
   const dependencies = execFileSync(python, ['-c', 'import importlib.metadata as m; print("\\n".join(sorted(d.metadata["Name"]+"=="+d.version for d in m.distributions())))'], { encoding: 'utf8' });
   await fs.writeFile(path.join(output, 'python-dependencies.txt'), dependencies);
+  await fs.copyFile(path.join(root, 'LICENSE'), path.join(output, 'LICENSE-GameChzzk.txt'));
   const manifest = [];
   async function hashes(dir) {
     for (const item of await fs.readdir(dir, { withFileTypes: true })) {

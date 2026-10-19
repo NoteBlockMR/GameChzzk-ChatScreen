@@ -1,7 +1,7 @@
 {
   "name": "chzzk-chat-lounge",
   "productName": "CHZZK Chat Lounge",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "author": "CHZZK Chat Lounge contributors",
   "description": "Game capture and CHZZK chat overlay",
   "main": "main.cjs",
