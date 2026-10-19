@@ -35,6 +35,7 @@ class CustomChatPanel(QWidget):
     def __init__(self, profile, web_factory, parent=None):
         super().__init__(parent)
         self.font_size = 16
+        self.font_family = "Malgun Gothic"
         self.messages = []
         self.generation = 0
         self.pending = False
@@ -107,6 +108,10 @@ class CustomChatPanel(QWidget):
         self.receiver.show()
         self.source.show()
 
+    def set_font_family(self, family):
+        self.font_family = family
+        self._render()
+
     def set_font_size(self, size):
         self.font_size = max(12, min(24, int(size)))
         self._render()
@@ -168,7 +173,7 @@ class CustomChatPanel(QWidget):
                 label.setTextFormat(Qt.TextFormat.PlainText)
                 label.setWordWrap(True)
                 label.setMinimumWidth(0)
-                label.setStyleSheet(f'background:transparent;border:none;color:{ink};font-size:{size}px;')
+                label.setStyleSheet(f'background:transparent;border:none;color:{ink};font-size:{size}px;font-family:{json.dumps(self.font_family, ensure_ascii=False)};')
                 box.addWidget(label)
             self.rows.addWidget(card)
-        QTimer.singleShot(0, self._scroll_to_latest)
+        QTimer.singleShot(0, self, self._scroll_to_latest)

@@ -5,10 +5,10 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, QSettings, QStandardPaths, Signal, QTimer
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QSlider, QSizeGrip, QComboBox, QGroupBox, QSpinBox,
-    QSystemTrayIcon, QMenu, QStyle)
+    QSystemTrayIcon, QMenu, QStyle, QFontComboBox)
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont, QFontDatabase
 
 from channel import channel_id, chat_url
 from hotkeys import GlobalHotkeys
@@ -216,6 +216,18 @@ class Controller(QWidget):
         self.chat_font.valueChanged.connect(self.set_chat_font)
         row.addWidget(self.chat_font)
         output_layout.addLayout(row)
+        font_row = QHBoxLayout()
+        font_row.addWidget(QLabel('채팅 폰트'))
+        self.chat_font_family = QFontComboBox()
+        self.chat_font_family.setToolTip('Windows에 설치된 폰트 · 새 폰트를 설치했다면 앱을 다시 실행하세요.')
+        saved_family = str(self.settings.value('chat_font_family', 'Malgun Gothic'))
+        if saved_family not in QFontDatabase.families():
+            saved_family = 'Malgun Gothic'
+        self.chat_font_family.setCurrentFont(QFont(saved_family))
+        self.chat_font_family.currentFontChanged.connect(self.set_chat_font_family)
+        font_row.addWidget(self.chat_font_family, 1)
+        output_layout.addLayout(font_row)
+        self.set_chat_font_family(self.chat_font_family.currentFont())
         hint = QLabel('OBS → 윈도우 캡처 → CHZZK 게임 + 채팅 — OBS 녹화용\n클라이언트 영역 캡처를 켜세요. 게임 소리는 OBS에서 별도로 추가합니다.')
         hint.setWordWrap(True)
         output_layout.addWidget(hint)
@@ -313,6 +325,12 @@ class Controller(QWidget):
 
     def resize_recording(self):
         self.recording.resize(*self.output_size.currentData())
+
+    def set_chat_font_family(self, font):
+        family = font.family()
+        self.overlay.chat.set_font_family(family)
+        self.recording.chat.set_font_family(family)
+        self.settings.setValue("chat_font_family", family)
 
     def set_chat_font(self, size):
         self.recording.set_font_size(size)
