@@ -22,7 +22,7 @@ end
 function R:start(channel)
  assert(R.channel(channel),'올바른 채널 주소 / ID를 입력하세요.')
  if self.channel==R.channel(channel) then return end
- self.channel=R.channel(channel);self.retry=0;self.failures=0;self.last_error=nil;self.last_error_at=nil;self.messages={};self.purged={};self.deleted={};self:connect()
+ self.channel=R.channel(channel);self.retry=0;self.failures=0;self.recovering=false;self.last_error=nil;self.last_error_at=nil;self.messages={};self.purged={};self.deleted={};self:connect()
 end
 function R:connect()
  self.status='연결 중';self.messages={};self.last=os.time();self.connected_at=nil;self.ping=os.time()
@@ -50,7 +50,12 @@ function R:receive(raw)
  if cmd==0 then self.net:send('{"cmd":10000,"ver":"2"}');return end
  if cmd==10100 then
   assert(type(b.sid)=='string','채팅 인증 실패');self.status='연결됨';self.connected_at=os.time();self.sid=b.sid
-  self:packet(5101,{recentMessageCount=50},{sid=b.sid,tid=2});return
+  self:packet(5101,{recentMessageCount=50},{sid=b.sid,tid=2})
+  if self.recovering then
+   self.recovering=false
+   self.log('CHZZK 재연결 완료: 채팅 수신을 재개합니다.','info')
+  end
+  return
  end
  if cmd==93101 or cmd==93102 or cmd==15101 then
   for _,m in ipairs(b.messageList or b) do
@@ -94,7 +99,7 @@ function R:tick()
   end
  end)
  if not ok then
-  self.net:clear();self.messages={};self.status='재연결 대기'
+  self.net:clear();self.messages={};self.status='재연결 대기';self.recovering=true
   self.failures=math.min((self.failures or 0)+1,4)
   local delay=math.min(10*2^(self.failures-1),60)
   local now=os.time();self.retry=now+delay

@@ -38,7 +38,7 @@ local function start_receiver(channel)
   local Receiver=require('chzzk_receiver')
   assert(Receiver.channel(channel),'올바른 치지직 채널 주소 / ID를 입력하세요.')
   if not receiver then
-   receiver=Receiver.new(function(message)obs.script_log(obs.LOG_WARNING,message)end)
+   receiver=Receiver.new(function(message,level)obs.script_log(level=='info' and obs.LOG_INFO or obs.LOG_WARNING,message)end)
    local file=assert(io.open(directory..'overlay.html','rb'))
    local html=file:read('*a');file:close()
    server=require('chzzk_http').new(html,function()return receiver:snapshot()end,18766)

@@ -2,6 +2,12 @@
 
 **Python 수신기 없이 OBS 내부 Lua가 직접 치지직 채팅을 받습니다.** LuaJIT FFI로 OBS에 포함된 libcurl의 HTTPS/WebSocket 기능을 사용합니다. 메시지 표시만 OBS 브라우저 소스(HTML/JavaScript)가 담당합니다. 기존 독립 실행형 앱/1.1.7 릴리즈는 변경하지 않았습니다.
 
+## v0.1.1 변경 사항
+
+- 연결 오류 후 인증이 다시 완료되면 `CHZZK 재연결 완료: 채팅 수신을 재개합니다.` 안내를 한 번 출력합니다.
+- 오류 56 발생 → 대기 → 재인증 → 채팅 수신 재개 과정을 모의 테스트로 확인했습니다. 연결 끊김 자체의 원인을 해결한 변경은 아닙니다.
+- 업데이트 시 ZIP 전체를 새 폴더에 풀고 OBS 스크립트를 해당 폴더의 `chzzk-chat.lua`로 다시 등록하세요.
+
 ## 실행
 
 1. `obs-plugin` 폴더 전체를 보관하세요. `chzzk-chat.lua`와 `chzzk_receiver.lua`, `chzzk_transport.lua`, `chzzk_http.lua`, `chzzk_json.lua`, `chzzk_fonts.lua`, `chzzk_overlay.lua`, `overlay.html`이 함께 필요합니다.
