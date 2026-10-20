@@ -9,6 +9,14 @@ OBS에서는 녹화용 창 하나를 윈도우 캡처하면 됩니다. 실제 �
 
 게임 화면과 커스텀 채팅 패널을 하나의 창에 나란히 표시한 실제 사용 예시입니다. 스크린샷의 채팅 내용은 사용자가 가린 상태입니다.
 
+## OBS Lua 확장 (실험 버전)
+
+별도 Python 수신기 없이 OBS 내부에서 치지직 채팅을 받고, 게임 + 채팅 합성 장면과 게임 위 채팅 오버레이를 구성할 수 있습니다. 설치된 폰트 선택과 Ctrl+Alt+F8 클릭 통과 전환을 지원합니다.
+
+[OBS Lua 확장 사용 안내](obs-plugin/README.md) · [Lua 전용 배포 다운로드](https://github.com/NoteBlockMR/GameChzzk-ChatScreen/releases/tag/obs-lua-v0.1.0)
+
+Windows x64 OBS용입니다. 기존 독립 실행형 앱 v1.1.7과 별도로 배포하며, 실제 OBS/게임 환경에서의 최종 검증이 필요한 실험 버전입니다.
+
 ## 실행
 
 Windows 10/11, Python 3.10 이상:

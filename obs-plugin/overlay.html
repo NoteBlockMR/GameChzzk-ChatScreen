@@ -1,0 +1,24 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><style>
+*{box-sizing:border-box}body{margin:0;background:transparent;color:#eef1ff;font-family:'Malgun Gothic',sans-serif}#feed{height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:16px}.card{flex-shrink:0;background:#1c2033;border:1px solid #30374e;border-left:3px solid #b9a2ff;border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}.name{color:#b9a2ff;font-size:.82em;margin-bottom:6px}.text{white-space:pre-wrap}
+</style><div id="feed"></div><script>
+const params=new URLSearchParams(location.search),feed=document.querySelector('#feed');
+document.body.style.fontFamily=JSON.stringify(params.get('font')||'Malgun Gothic')+', sans-serif';
+document.body.style.fontSize=Math.max(12,Math.min(48,Number(params.get('size'))||20))+'px';
+let previous='';
+async function poll(){
+ try{
+  const response=await fetch('/state?channel='+encodeURIComponent(params.get('channel')||''),{signal:AbortSignal.timeout(2500)});
+  if(!response.ok)throw Error('receiver');
+  const state=await response.json(),signature=JSON.stringify(state.messages);
+  if(signature!==previous){
+   previous=signature;feed.replaceChildren();
+   for(const msg of state.messages.slice(-100)){
+    const card=document.createElement('div');card.className='card';
+    for(const [kind,value]of [['name',msg.nickname],['text',msg.content]]){const el=document.createElement('div');el.className=kind;el.textContent=value;card.append(el)}
+    feed.append(card);
+   }
+  }
+ }catch{previous='';feed.replaceChildren()}
+ setTimeout(poll,350);
+}poll();
+</script></html>
