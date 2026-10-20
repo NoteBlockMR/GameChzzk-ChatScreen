@@ -2,6 +2,10 @@
 
 **Python 수신기 없이 OBS 내부 Lua가 직접 치지직 채팅을 받습니다.** LuaJIT FFI로 OBS에 포함된 libcurl의 HTTPS/WebSocket 기능을 사용합니다. 메시지 표시만 OBS 브라우저 소스(HTML/JavaScript)가 담당합니다. 기존 독립 실행형 앱/1.1.7 릴리즈는 변경하지 않았습니다.
 
+## v0.1.4 변경 사항
+
+- Windows PowerShell에서 SOOP 실행 옵션을 잘못 해석해 `.encoding=UTF-8` 클래스를 찾는 오류를 수정했습니다.
+
 ## v0.1.3 변경 사항
 
 - 선택형 Java/soop4j 애드온으로 치지직·SOOP 일반 채팅을 함께 표시합니다.
