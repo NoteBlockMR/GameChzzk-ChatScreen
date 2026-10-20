@@ -1,24 +1,39 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><style>
 *{box-sizing:border-box}body{margin:0;background:transparent;color:#eef1ff;font-family:'Malgun Gothic',sans-serif}#feed{height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:16px}.card{flex-shrink:0;background:#1c2033;border:1px solid #30374e;border-left:3px solid #b9a2ff;border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}.name{color:#b9a2ff;font-size:.82em;margin-bottom:6px}.text{white-space:pre-wrap}
-</style><div id="feed"></div><script>
+.card.soop{border-left-color:#54c7ff}.badge{font-size:.7em;color:#00e79b;margin-right:6px}.soop .badge{color:#54c7ff}</style><div id="feed"></div><script>
 const params=new URLSearchParams(location.search),feed=document.querySelector('#feed');
 document.body.style.fontFamily=JSON.stringify(params.get('font')||'Malgun Gothic')+', sans-serif';
 document.body.style.fontSize=Math.max(12,Math.min(48,Number(params.get('size'))||20))+'px';
+const soopChannel=params.get('soop')||'';
 let previous='';
-async function poll(){
+const streams={CHZZK:[],SOOP:[]};
+let soopLastSuccess=0;
+function render(){
+ const messages=Object.entries(streams).flatMap(([platform,list])=>list.map(msg=>({...msg,platform})))
+  .sort((a,b)=>(a.time-b.time)||a.platform.localeCompare(b.platform)||a.key.localeCompare(b.key)).slice(-100);
+ const signature=JSON.stringify(messages);
+ if(signature===previous)return;
+ previous=signature;feed.replaceChildren();
+ for(const msg of messages){
+  const card=document.createElement('div');card.className='card'+(msg.platform==='SOOP'?' soop':'');
+  const name=document.createElement('div');name.className='name';
+  if(soopChannel){const badge=document.createElement('span');badge.className='badge';badge.textContent=msg.platform;name.append(badge)}
+  name.append(document.createTextNode(msg.nickname));card.append(name);
+  const content=document.createElement('div');content.className='text';content.textContent=msg.content;card.append(content);feed.append(card);
+ }
+}
+async function poll(platform,url,channel){
  try{
-  const response=await fetch('/state?channel='+encodeURIComponent(params.get('channel')||''),{signal:AbortSignal.timeout(2500)});
+  const response=await fetch(url,{signal:AbortSignal.timeout(2500)});
   if(!response.ok)throw Error('receiver');
-  const state=await response.json(),signature=JSON.stringify(state.messages);
-  if(signature!==previous){
-   previous=signature;feed.replaceChildren();
-   for(const msg of state.messages.slice(-100)){
-    const card=document.createElement('div');card.className='card';
-    for(const [kind,value]of [['name',msg.nickname],['text',msg.content]]){const el=document.createElement('div');el.className=kind;el.textContent=value;card.append(el)}
-    feed.append(card);
-   }
-  }
- }catch{previous='';feed.replaceChildren()}
- setTimeout(poll,350);
-}poll();
+  const state=await response.json();
+  if(platform==='SOOP' && state.channel!==channel){streams.SOOP=[];soopLastSuccess=0;throw Error('channel mismatch')}
+  if(!Array.isArray(state.messages))throw Error('invalid state');
+  streams[platform]=state.messages.filter(m=>m&&typeof m.key==='string'&&typeof m.nickname==='string'&&typeof m.content==='string'&&Number.isFinite(m.time)).slice(-100);
+  if(platform==='SOOP')soopLastSuccess=Date.now();
+ }catch{if(platform!=='SOOP'||Date.now()-soopLastSuccess>30000)streams[platform]=[]}
+ render();setTimeout(()=>poll(platform,url,channel),350);
+}
+poll('CHZZK','/state?channel='+encodeURIComponent(params.get('channel')||''));
+if(soopChannel)poll('SOOP','http://127.0.0.1:18767/state',soopChannel);
 </script></html>

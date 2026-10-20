@@ -55,11 +55,17 @@ function script_load(settings)
  if channel~='' then start_receiver(channel) end
 end
 local function apply(props,prop,target_scene,chat_width,chat_height)
+ local soop_id=obs.obs_data_get_string(config,'soop_channel'):match('^%s*(.-)%s*$')
+ if obs.obs_data_get_bool(config,'soop_enabled') and (#soop_id<1 or #soop_id>64 or not soop_id:match('^[%w_]+$')) then
+  obs.script_log(obs.LOG_WARNING,'SOOP 방송 ID를 입력하세요. 애드온 실행 시 입력한 ID와 같아야 합니다.')
+  return false
+ end
  local channel=obs.obs_data_get_string(config,'channel')
  if channel=='' then obs.script_log(obs.LOG_WARNING,'채널 주소를 입력하세요.');return false end
  if not start_receiver(channel) then return false end
  local settings=obs.obs_data_create()
  local url='http://127.0.0.1:18766/?channel='..encode(channel)..'&font='..encode(obs.obs_data_get_string(config,'font'))..'&size='..obs.obs_data_get_int(config,'size')
+ if obs.obs_data_get_bool(config,'soop_enabled') then url=url..'&soop='..encode(soop_id) end
  obs.obs_data_set_string(settings,'url',url)
  obs.obs_data_set_int(settings,'width',chat_width or obs.obs_data_get_int(config,'width'))
  obs.obs_data_set_int(settings,'height',chat_height or obs.obs_data_get_int(config,'height'))
@@ -391,6 +397,8 @@ end
 function script_properties()
  local p=obs.obs_properties_create()
  obs.obs_properties_add_text(p,'channel','치지직 채널 주소 / ID',obs.OBS_TEXT_DEFAULT)
+ obs.obs_properties_add_bool(p,'soop_enabled','SOOP 채팅 함께 표시 (Java 애드온 필요)')
+ obs.obs_properties_add_text(p,'soop_channel','SOOP 방송 ID (애드온과 동일)',obs.OBS_TEXT_DEFAULT)
  local fonts=obs.obs_properties_add_list(p,'font','채팅 폰트',obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
  local selected=config and obs.obs_data_get_string(config,'font') or 'Malgun Gothic'
  if selected=='' then selected='Malgun Gothic' end
@@ -439,6 +447,7 @@ function script_properties()
  return p
 end
 function script_defaults(s)
+ obs.obs_data_set_default_bool(s,'soop_enabled',false)
  for _,entry in ipairs(donation_sources) do obs.obs_data_set_default_bool(s,entry.key..'_enabled',false) end
  obs.obs_data_set_default_bool(s,'camera_enabled',false)
  obs.obs_data_set_default_string(s,'composition_layout','side_by_side')

@@ -1,0 +1,27 @@
+[
+  {
+    "name": "soop4j-0.0.5.jar",
+    "url": "https://repo.maven.apache.org/maven2/kr/zzik2/soop4j/0.0.5/soop4j-0.0.5.jar",
+    "sha256": "7ee887ed50b44b8df44ebac7f7e13807b2be057af8c3ade208b89e04915f1e7e"
+  },
+  {
+    "name": "gson-2.10.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.10.1/gson-2.10.1.jar",
+    "sha256": "4241c14a7727c34feea6507ec801318a3d4a90f070e4525681079fb94ee4c593"
+  },
+  {
+    "name": "Java-WebSocket-1.6.0.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/java-websocket/Java-WebSocket/1.6.0/Java-WebSocket-1.6.0.jar",
+    "sha256": "eae29213e4f16515639c28957200f011b3967fffcada1962cf0255d24919c22f"
+  },
+  {
+    "name": "slf4j-api-2.0.6.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/slf4j/slf4j-api/2.0.6/slf4j-api-2.0.6.jar",
+    "sha256": "2f2a92d410b268139d7d63b75ed25e21995cfe4100c19bf23577cfdbc8077bda"
+  },
+  {
+    "name": "slf4j-nop-2.0.6.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/slf4j/slf4j-nop/2.0.6/slf4j-nop-2.0.6.jar",
+    "sha256": "7966dcd73078250f38595223b1e807cd7566188a56236def031e265426056fc8"
+  }
+]
