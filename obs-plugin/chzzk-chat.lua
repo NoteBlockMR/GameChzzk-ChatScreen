@@ -153,6 +153,55 @@ shutdown_overlay=function()
 end
 local capture_ids={game_capture=true,window_capture=true,monitor_capture=true}
 local combined_name='CHZZK 게임 + 채팅'
+-- Check the selected device against the current DirectShow device list.
+-- Device names are a conservative heuristic, not proof of live video frames.
+local function virtual_camera_label(source)
+ if obs.obs_source_get_id(source)~='dshow_input' then return nil end
+ local settings,properties
+ local ok,label=pcall(function()
+  settings=obs.obs_source_get_settings(source)
+  local selected=obs.obs_data_get_string(settings,'video_device_id')
+  if selected=='' then return nil end
+  properties=obs.obs_source_properties(source)
+  if not properties then return nil end
+  local devices=obs.obs_properties_get(properties,'video_device_id')
+  if not devices then return nil end
+  for i=0,obs.obs_property_list_item_count(devices)-1 do
+   if obs.obs_property_list_item_string(devices,i)==selected and not obs.obs_property_list_item_disabled(devices,i) then
+    local name=obs.obs_property_list_item_name(devices,i)
+    local lower=name:lower()
+    -- Exclude OBS output to avoid feeding this composition back into itself.
+    if lower:find('obs',1,true) then return nil end
+    for _,token in ipairs({'virtual','가상','vtube','vseeface','vnyan','animaze','facerig','v magic','vmagic','manycam'}) do
+     if lower:find(token,1,true) then return name end
+    end
+   end
+  end
+ end)
+ if properties then obs.obs_properties_destroy(properties) end
+ if settings then obs.obs_data_release(settings) end
+ if ok then return label end
+end
+local function camera_options(p)
+ local enabled=obs.obs_properties_add_bool(p,'camera_enabled','버추얼캠 함께 표시')
+ local list=obs.obs_properties_add_list(p,'camera_source','감지된 버추얼캠 소스',obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
+ obs.obs_property_list_add_string(list,'사용할 가상 카메라를 선택하세요','')
+ local sources=obs.obs_enum_sources();local count=0
+ if sources then
+  for _,source in ipairs(sources) do
+   local label=virtual_camera_label(source)
+   if label then
+    local name=obs.obs_source_get_name(source)
+    obs.obs_property_list_add_string(list,name..' ('..label..')',name);count=count+1
+   end
+  end
+  obs.source_list_release(sources)
+ end
+ obs.obs_property_set_enabled(enabled,count>0)
+ obs.obs_property_set_enabled(list,count>0)
+ if count==0 and config then obs.obs_data_set_bool(config,'camera_enabled',false) end
+ obs.obs_properties_add_button(p,'refresh_cameras',count>0 and '버추얼캠 다시 감지' or '버추얼캠 미감지 · 다시 감지',function()return true end)
+end
 local function place(item,x,y,w,h)
  local position=obs.vec2()
  position.x=x;position.y=y
@@ -178,18 +227,100 @@ local function composition_available()
   'obs_sceneitem_set_bounds_alignment','obs_sceneitem_set_bounds','obs_sceneitem_crop',
   'obs_sceneitem_set_crop','obs_sceneitem_set_visible','obs_scene_find_sceneitem_by_id',
   'obs_sceneitem_get_id','obs_sceneitem_remove','obs_scene_add','obs_scene_create',
-  'obs_video_info','obs_get_video_info'}
+  'obs_video_info','obs_get_video_info','obs_sceneitem_set_order'}
  for _,name in ipairs(required) do
   if obs[name]==nil then
    obs.script_log(obs.LOG_WARNING,'합성 기능을 사용할 수 없습니다. OBS Lua API 누락: '..name)
    return false
   end
  end
- if obs.OBS_BOUNDS_SCALE_INNER==nil then return false end
+ if obs.OBS_BOUNDS_SCALE_INNER==nil or obs.OBS_ORDER_MOVE_TOP==nil then return false end
  return true
+end
+local donation_sources={
+ {key='donation',name='CHZZK 공식 후원 알림',label='후원 알림'},
+ {key='video_donation',name='CHZZK 공식 영상 후원',label='영상 후원'},
+ {key='mission_donation',name='CHZZK 공식 미션 후원',label='미션 후원'},
+}
+local function donation_url(entry)
+ return obs.obs_data_get_string(config,entry.key..'_url'):match('^%s*(.-)%s*$')
+end
+local function validate_donations()
+ for _,entry in ipairs(donation_sources) do
+  if obs.obs_data_get_bool(config,entry.key..'_enabled') then
+   local url=donation_url(entry)
+   if not url:match('^https://chzzk%.naver%.com/[^%s]+$') or url:find('[%c]') then
+    obs.script_log(obs.LOG_WARNING,entry.label..': 치지직 스튜디오에서 복사한 https://chzzk.naver.com/ 오버레이 주소를 입력하세요.')
+    return false
+   end
+  end
+  local source=obs.obs_get_source_by_name(entry.name)
+  if source then
+   local settings=obs.obs_source_get_settings(source)
+   local owned=obs.obs_source_get_id(source)=='browser_source' and obs.obs_data_get_bool(settings,'chzzk_donation_managed')
+   obs.obs_data_release(settings);obs.obs_source_release(source)
+   if not owned then
+    obs.script_log(obs.LOG_WARNING,entry.label..': 같은 이름의 기존 소스가 있습니다. 기존 소스 이름을 변경하세요.')
+    return false
+   end
+  end
+ end
+ return true
+end
+local function apply_donation(scene,entry,game_width,canvas_height)
+ local enabled=obs.obs_data_get_bool(config,entry.key..'_enabled')
+ local source=obs.obs_get_source_by_name(entry.name)
+ local settings=obs.obs_data_create()
+ local ok=pcall(function()
+  local is_video=entry.key=='video_donation'
+  local is_mission=entry.key=='mission_donation'
+  local width=math.max(1,math.floor(game_width*(is_video and 0.6 or 0.7)))
+  local height=math.max(1,math.floor(is_video and math.min(width*9/16,canvas_height*0.6) or canvas_height*0.25))
+  obs.obs_data_set_bool(settings,'chzzk_donation_managed',true)
+  obs.obs_data_set_string(settings,'url',enabled and donation_url(entry) or 'about:blank')
+  obs.obs_data_set_int(settings,'width',width);obs.obs_data_set_int(settings,'height',height)
+  obs.obs_data_set_bool(settings,'is_local_file',false)
+  obs.obs_data_set_bool(settings,'shutdown',true)
+  obs.obs_data_set_bool(settings,'reroute_audio',true)
+  if source then
+   -- Avoid reloading the alert queue for unrelated layout changes.
+   local old=obs.obs_source_get_settings(source)
+   local changed=obs.obs_data_get_string(old,'url')~=obs.obs_data_get_string(settings,'url') or obs.obs_data_get_int(old,'width')~=width or obs.obs_data_get_int(old,'height')~=height
+   obs.obs_data_release(old)
+   if changed then obs.obs_source_update(source,settings) end
+  elseif enabled then
+   source=obs.obs_source_create('browser_source',entry.name,settings,nil)
+   assert(source,'browser source unavailable')
+  end
+  local item=obs.obs_scene_find_source(scene,entry.name)
+  if not enabled then
+   if item then obs.obs_sceneitem_remove(item) end
+   return
+  end
+  if not item then item=obs.obs_scene_add(scene,source) end
+  assert(item,'scene item unavailable')
+  local y=is_mission and canvas_height-height or (is_video and math.floor((canvas_height-height)/2) or 0)
+  place(item,math.floor((game_width-width)/2),y,width,height)
+  obs.obs_sceneitem_set_order(item,obs.OBS_ORDER_MOVE_TOP)
+ end)
+ obs.obs_data_release(settings)
+ if source then obs.obs_source_release(source) end
+ -- Never include exceptions that could contain the private overlay URL.
+ assert(ok,entry.label..' 소스 적용 실패')
 end
 local function compose()
  if not composition_available() then return false end
+ if not validate_donations() then return false end
+ local camera_name=obs.obs_data_get_bool(config,'camera_enabled') and obs.obs_data_get_string(config,'camera_source') or ''
+ if obs.obs_data_get_bool(config,'camera_enabled') then
+  local camera=obs.obs_get_source_by_name(camera_name)
+  local detected=camera and virtual_camera_label(camera)
+  if camera then obs.obs_source_release(camera) end
+  if not detected then
+   obs.script_log(obs.LOG_WARNING,'버추얼캠을 찾을 수 없습니다. 비디오 캡처 장치 등록 후 다시 감지하거나 버추얼캠 설정을 해제하세요.')
+   return false
+  end
+ end
  if obs.obs_data_get_string(config,'channel')=='' then obs.script_log(obs.LOG_WARNING,'채널 주소를 입력하세요.');return false end
  local game=obs.obs_get_source_by_name(obs.obs_data_get_string(config,'game'))
  if not game then obs.script_log(obs.LOG_WARNING,'먼저 OBS 게임/윈도우/디스플레이 캡처 소스를 만들고 선택하세요.');return false end
@@ -198,6 +329,7 @@ local function compose()
  if not obs.obs_get_video_info(video) or video.base_width<2 or video.base_height<1 then obs.obs_source_release(game);return false end
  local width=math.min(obs.obs_data_get_int(config,'width'),math.floor(video.base_width/2))
  width=math.max(1,width)
+ local overlap=obs.obs_data_get_string(config,'composition_layout')=='overlay'
  local existing=obs.obs_get_source_by_name(combined_name)
  local scene,created,metadata
  if existing then
@@ -220,9 +352,31 @@ local function compose()
   if old and old~=item then obs.obs_sceneitem_remove(old) end
   if not item then item=obs.obs_scene_add(scene,game) end
   obs.obs_data_set_int(metadata,'chzzk_game_item',obs.obs_sceneitem_get_id(item))
-  place(item,0,0,video.base_width-width,video.base_height)
+  place(item,0,0,overlap and video.base_width or video.base_width-width,video.base_height)
+  local old_camera=obs.obs_scene_find_sceneitem_by_id(scene,obs.obs_data_get_int(metadata,'chzzk_camera_item'))
+  local camera_item=camera_name~='' and obs.obs_scene_find_source(scene,camera_name) or nil
+  if camera_name~='' and not camera_item then
+   local camera=obs.obs_get_source_by_name(camera_name)
+   assert(camera,'버추얼캠 소스가 제거되었습니다.')
+   local added,value=pcall(obs.obs_scene_add,scene,camera)
+   obs.obs_source_release(camera)
+   assert(added and value,'버추얼캠 추가 실패');camera_item=value
+  end
+  if old_camera and old_camera~=camera_item then obs.obs_sceneitem_remove(old_camera) end
+  obs.obs_data_set_int(metadata,'chzzk_camera_item',camera_item and obs.obs_sceneitem_get_id(camera_item) or 0)
+  if camera_item then
+   local game_width=overlap and video.base_width or video.base_width-width
+   local camera_height=math.max(1,math.floor(video.base_height*0.4))
+   place(camera_item,0,video.base_height-camera_height,math.max(1,math.floor(game_width*0.3)),camera_height)
+   obs.obs_sceneitem_set_order(camera_item,obs.OBS_ORDER_MOVE_TOP)
+  end
   local chat=obs.obs_scene_find_source(scene,source_name)
-  if chat then place(chat,video.base_width-width,0,width,video.base_height) end
+  if chat then
+   place(chat,video.base_width-width,0,width,video.base_height)
+   obs.obs_sceneitem_set_order(chat,obs.OBS_ORDER_MOVE_TOP)
+  end
+  local game_width=overlap and video.base_width or video.base_width-width
+  for _,entry in ipairs(donation_sources) do apply_donation(scene,entry,game_width,video.base_height) end
   obs.script_log(obs.LOG_INFO,'CHZZK 게임 + 채팅 장면 준비 완료. 장면 목록에서 선택하세요.')
   return true
  end
@@ -272,11 +426,22 @@ function script_properties()
   obs.source_list_release(sources)
  end
  obs.obs_properties_add_button(p,'refresh','캡처 소스 목록 새로고침',function() return true end)
+ local layout=obs.obs_properties_add_list(p,'composition_layout','녹화 화면 배치',obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
+ obs.obs_property_list_add_string(layout,'나란히 — 게임 왼쪽 / 채팅 오른쪽','side_by_side')
+ obs.obs_property_list_add_string(layout,'중첩 — 전체 게임 위에 채팅 표시','overlay')
+ camera_options(p)
+ for _,entry in ipairs(donation_sources) do
+  obs.obs_properties_add_bool(p,entry.key..'_enabled',entry.label..' 표시 (합성 갱신 시 적용)')
+  obs.obs_properties_add_text(p,entry.key..'_url',entry.label..' 공식 오버레이 주소',obs.OBS_TEXT_PASSWORD)
+ end
  obs.obs_properties_add_button(p,'compose','게임 + 채팅 합성 장면 만들기 / 갱신',compose)
  obs.obs_properties_add_button(p,'apply','현재 장면에 채팅 추가 / 설정 적용',apply)
  return p
 end
 function script_defaults(s)
+ for _,entry in ipairs(donation_sources) do obs.obs_data_set_default_bool(s,entry.key..'_enabled',false) end
+ obs.obs_data_set_default_bool(s,'camera_enabled',false)
+ obs.obs_data_set_default_string(s,'composition_layout','side_by_side')
  obs.obs_data_set_default_int(s,'overlay_opacity',90)
  obs.obs_data_set_default_string(s,'font','Malgun Gothic')
  obs.obs_data_set_default_int(s,'size',20)
