@@ -1,6 +1,6 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><style>
 *{box-sizing:border-box}body{margin:0;background:transparent;color:#eef1ff;font-family:'Malgun Gothic',sans-serif}#feed{height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:16px}.card{flex-shrink:0;background:#1c2033;border:1px solid #30374e;border-left:3px solid #b9a2ff;border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}.name{color:#b9a2ff;font-size:.82em;margin-bottom:6px}.text{white-space:pre-wrap}
-.card.soop{border-left-color:#54c7ff}.badge{font-size:.7em;color:#00e79b;margin-right:6px}.soop .badge{color:#54c7ff}</style><div id="feed"></div><script>
+.card.soop{border-left-color:#54c7ff}.badge{font-size:.7em;color:#00e79b;margin-right:6px}.soop .badge{color:#54c7ff}.card.soop.donation{border-left-color:#ffc963;background:#302619}.card.soop.subscription{border-left-color:#ef9cdd;background:#302037}</style><div id="feed"></div><script>
 const params=new URLSearchParams(location.search),feed=document.querySelector('#feed');
 document.body.style.fontFamily=JSON.stringify(params.get('font')||'Malgun Gothic')+', sans-serif';
 document.body.style.fontSize=Math.max(12,Math.min(48,Number(params.get('size'))||20))+'px';
@@ -9,13 +9,14 @@ let previous='';
 const streams={CHZZK:[],SOOP:[]};
 let soopLastSuccess=0;
 function render(){
- const messages=Object.entries(streams).flatMap(([platform,list])=>list.map(msg=>({...msg,platform})))
+ const messages=Object.entries(streams).flatMap(([platform,list])=>list.filter(msg=>platform!=='SOOP'||!((msg.kind==='donation'&&params.get('soop_donations')==='0')||(msg.kind==='subscription'&&params.get('soop_subscriptions')==='0'))).map(msg=>({...msg,platform})))
   .sort((a,b)=>(a.time-b.time)||a.platform.localeCompare(b.platform)||a.key.localeCompare(b.key)).slice(-100);
  const signature=JSON.stringify(messages);
  if(signature===previous)return;
  previous=signature;feed.replaceChildren();
  for(const msg of messages){
   const card=document.createElement('div');card.className='card'+(msg.platform==='SOOP'?' soop':'');
+  if(msg.platform==='SOOP'&&['donation','subscription'].includes(msg.kind))card.className+=' '+msg.kind;
   const name=document.createElement('div');name.className='name';
   if(soopChannel){const badge=document.createElement('span');badge.className='badge';badge.textContent=msg.platform;name.append(badge)}
   name.append(document.createTextNode(msg.nickname));card.append(name);

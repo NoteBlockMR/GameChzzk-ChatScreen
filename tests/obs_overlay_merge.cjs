@@ -33,5 +33,12 @@ async function scenario(soop){
  states.SOOP.channel='fixture_soop';states.CHZZK.messages=[];await cycle();assert.equal(feed.children.length,1);
  assert.equal(feed.children[0].children[1].textContent,'hidden');
  states.CHZZK=new Error('offline');await cycle();assert.equal(feed.children.length,1);
+ states.SOOP.messages=[{key:'d',time:40,nickname:'donor',content:'100',kind:'donation'},{key:'s',time:50,nickname:'sub',content:'6',kind:'subscription'}];
+ await cycle();assert.equal(feed.children.length,2);
+ assert(feed.children[0].className.includes('donation'));assert(feed.children[1].className.includes('subscription'));
+ vm.runInNewContext("params.set('soop_donations','0');render()",context);assert.equal(feed.children.length,1);
+ vm.runInNewContext("params.set('soop_subscriptions','0');render()",context);assert.equal(feed.children.length,0);
+ vm.runInNewContext("params.delete('soop_donations');render()",context);assert.equal(feed.children.length,1);
+
 }
 (async()=>{await scenario(false);await scenario(true);console.log('MERGE_OK: optional addon, labels, time order, literal text, independent failure, mismatch, deletion')})().catch(e=>{console.error(e);process.exitCode=1});

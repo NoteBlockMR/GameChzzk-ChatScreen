@@ -58,6 +58,8 @@ public final class SoopAddon implements AutoCloseable {
             @Override public void onChat(ChatEvent event) {
                 add(event.getUserId(), event.getUsername(), event.getMessage(), event.getReceivedTime().toEpochMilli());
             }
+            @Override public void onDonation(DonationEvent event) { donation(event); }
+            @Override public void onSubscribe(SubscribeEvent event) { subscription(event); }
             @Override public void onEnterChatRoom(EnterChatRoomEvent event) { setStatus("연결됨"); }
             @Override public void onDisconnect(DisconnectEvent event) { setStatus("재연결 대기"); }
             @Override public void onError(Exception error) { logFailure(); }
@@ -67,10 +69,26 @@ public final class SoopAddon implements AutoCloseable {
         else timer.scheduleWithFixedDelay(this::tick, 0, 1, TimeUnit.SECONDS);
     }
     synchronized void add(String user, String nickname, String content, long time) {
+        addEvent(user,nickname,content,time,"chat");
+    }
+    void donation(DonationEvent event) {
+        if (event.getType()==null || event.getAmount()<0) return;
+        String title=event.getType()==DonationType.AD_BALLOON ? "애드벌룬 " :
+            event.getType()==DonationType.VIDEO ? "영상 후원 · 별풍선 " : "별풍선 ";
+        addEvent(event.getFrom(),event.getFromUsername(),title+event.getAmount()+"개",
+            event.getReceivedTime().toEpochMilli(),"donation");
+    }
+    void subscription(SubscribeEvent event) {
+        if (event.getMonthCount()<0) return;
+        String text="구독 알림"+(event.getMonthCount()>0 ? " · "+event.getMonthCount()+"개월" : "");
+        addEvent(event.getFrom(),event.getFromUsername(),text,event.getReceivedTime().toEpochMilli(),"subscription");
+    }
+    synchronized void addEvent(String user, String nickname, String content, long time, String kind) {
         if (user == null || nickname == null || content == null || content.length() > 8192) return;
         Map<String,Object> message = new LinkedHashMap<>();
         message.put("key", session+":"+(++sequence)); message.put("user",user);
         message.put("nickname",nickname); message.put("content",content); message.put("time",time);
+        message.put("kind",kind);
         messages.addLast(message); while (messages.size()>100) messages.removeFirst();
     }
     synchronized void setStatus(String value) {
